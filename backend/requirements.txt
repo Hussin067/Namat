@@ -9,3 +9,10 @@ psycopg[binary]==3.3.6
 
 # Settings loaded from environment variables / .env
 pydantic-settings==2.16.0
+
+# Authentication: Argon2 password hashing, JWT access tokens,
+# email validation (EmailStr) and OAuth2 login form parsing
+pwdlib[argon2]==0.3.1
+PyJWT==2.15.1
+email-validator==2.3.0
+python-multipart==0.0.32

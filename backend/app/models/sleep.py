@@ -32,10 +32,10 @@ class SleepLog(TimestampMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE")
     )
-    sleep_date: Mapped[date]  # the date the night started
+    sleep_date: Mapped[date]  
     bedtime: Mapped[datetime]
     wake_time: Mapped[datetime]
-    quality: Mapped[int | None] = mapped_column(SmallInteger)  # 1 poor .. 5 great
+    quality: Mapped[int | None] = mapped_column(SmallInteger) 
     awakenings: Mapped[int | None] = mapped_column(SmallInteger)
     notes: Mapped[str | None] = mapped_column(Text)
 
