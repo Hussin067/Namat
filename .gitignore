@@ -1,0 +1,36 @@
+# ---------- Secrets & local environment ----------
+# Never commit real credentials. Only the *.example templates are tracked.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---------- Python ----------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------- Node / frontend ----------
+node_modules/
+dist/
+*.log
+
+# ---------- Local database dumps ----------
+*.sql.gz
+*.dump
+
+# ---------- Editors & OS ----------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
