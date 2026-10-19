@@ -8,21 +8,17 @@ import app.models  # noqa: F401  (registers every table on Base.metadata)
 from app.core.config import get_settings
 from app.db.base import Base
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Models' metadata, used by `alembic revision --autogenerate`.
+
 target_metadata = Base.metadata
 
-# The URL comes from backend/.env (never from alembic.ini). It is passed
-# straight to SQLAlchemy rather than through config.set_main_option(), which
-# would choke on a "%" in a URL-encoded password.
+
 DATABASE_URL = get_settings().database_url.get_secret_value()
 
 
