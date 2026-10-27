@@ -1,6 +1,5 @@
 import { useState } from 'react'
 
-// Must match the backend limits in app/schemas/auth.py.
 const PASSWORD_MIN = 12
 const PASSWORD_MAX = 128
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

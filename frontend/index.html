@@ -2,9 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/namat-mark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Migraine Tracker</title>
+    <meta name="description" content="Namat: a private, calm place to record headaches and migraines." />
+    <title>Namat</title>
+    <script>
+      // Apply the saved theme and language before first paint, so the page never
+      // flashes the wrong colours or direction. Same rules as ThemeProvider.jsx
+      // and I18nProvider.jsx.
+      (function () {
+        var theme = 'light', lang = 'en', root = document.documentElement;
+        try {
+          theme = localStorage.getItem('namat-theme') === 'dark' ? 'dark' : 'light';
+          lang = localStorage.getItem('namat-lang') === 'ar' ? 'ar' : 'en';
+        } catch (e) {}
+        root.dataset.theme = theme;
+        root.lang = lang;
+        root.dir = lang === 'ar' ? 'rtl' : 'ltr';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

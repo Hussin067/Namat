@@ -36,19 +36,29 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def _migrate(connection) -> None:
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode against the live database."""
+    # The test suite passes its own connection (to namat_test); the normal
+    # `alembic` command doesn't, and uses DATABASE_URL from backend/.env.
+    provided = config.attributes.get("connection")
+    if provided is not None:
+        _migrate(provided)
+        return
+
     connectable = create_engine(DATABASE_URL, poolclass=pool.NullPool)
-
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
+        _migrate(connection)
 
 
 if context.is_offline_mode():

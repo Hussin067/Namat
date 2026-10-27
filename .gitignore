@@ -23,6 +23,10 @@ node_modules/
 dist/
 *.log
 
+# Licensed Thmanyah font files: the license forbids uploading or hosting them
+# (including on GitHub). Each developer downloads them from thmanyah.com.
+frontend/public/fonts/thmanyah/
+
 # ---------- Local database dumps ----------
 *.sql.gz
 *.dump

@@ -1,12 +1,196 @@
-
 @import "tailwindcss";
 
-html {
-  font-family: Arial, Helvetica, sans-serif;
+/* Fonts are self-hosted from npm (Fontsource, SIL Open Font License), imported
+   in main.jsx: Atkinson Hyperlegible Next (English text), Fraunces (English
+   headings) and Noto Sans Arabic (all Arabic text, the same family as the
+   Arabic PDF report). Nothing is loaded from third-party font servers. */
+
+/* Dark utilities follow the resolved theme on <html data-theme="…">, not the
+   OS setting directly, so the in-app toggle always wins. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Every colour pairing below was checked for WCAG AA contrast
+   (text >= 4.5:1, control borders >= 3:1) in both themes.
+   --------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --canvas: #f7f5f0;        /* warm off-white page background */
+  --surface: #ffffff;       /* cards, inputs */
+  --sunken: #efebe3;        /* wells, table headers, hover */
+  --line: #e2ddd2;          /* dividers, card borders */
+  --line-strong: #8f8a7f;   /* input borders (3:1) */
+  --ink: #1c2830;           /* primary text */
+  --ink-muted: #526068;     /* secondary text */
+
+  --brand: #1d6b67;         /* muted teal */
+  --brand-hover: #165754;
+  --on-brand: #ffffff;
+  --brand-soft: #e1efed;
+  --brand-ink: #155350;     /* text on brand-soft */
+
+  --success: #2c6a45;
+  --success-soft: #e3f1e7;
+  --warning: #85550f;
+  --warning-soft: #f7ead2;
+  --danger: #b0261e;
+  --danger-soft: #fbe6e3;
+
+  /* Chart series colours (all >= 4.4:1 on the card surface). */
+  --chart-1: #1d6b67;
+  --chart-2: #a86a12;
+  --chart-3: #b4405a;
+  --chart-4: #4458a3;
+  --chart-5: #3a7a4c;
+  --chart-6: #7a4d91;
+  --chart-7: #6b7780;
+
+  --shadow-card: 0 1px 2px rgb(28 40 48 / 0.04), 0 2px 8px rgb(28 40 48 / 0.04);
+  --shadow-pop: 0 8px 30px rgb(28 40 48 / 0.12);
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #12191e;        /* deep slate, not pure black */
+  --surface: #1a2329;
+  --sunken: #0e1418;
+  --line: #2a353c;
+  --line-strong: #6b7a83;
+  --ink: #e6ebed;
+  --ink-muted: #9eacb4;
+
+  --brand: #6cc3ba;
+  --brand-hover: #86d1c9;
+  --on-brand: #0b2422;
+  --brand-soft: #173431;
+  --brand-ink: #9edbd3;
+
+  --success: #7cc797;
+  --success-soft: #17301f;
+  --warning: #e3b466;
+  --warning-soft: #372a12;
+  --danger: #f08c82;
+  --danger-soft: #3a1d1a;
+
+  /* Chart series colours (all >= 6.7:1 on the card surface). */
+  --chart-1: #6cc3ba;
+  --chart-2: #e3b466;
+  --chart-3: #f08c9b;
+  --chart-4: #98abea;
+  --chart-5: #8fd19e;
+  --chart-6: #c9a2e0;
+  --chart-7: #9eacb4;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 8px 30px rgb(0 0 0 / 0.45);
+}
+
+/* Expose the tokens as Tailwind utilities: bg-canvas, text-ink-muted, border-line … */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+
+  /* Atkinson Hyperlegible Next: designed for low-vision legibility, which
+     also helps readers who are mid-headache. Fraunces softens headings.
+     Neither has Arabic letters, so Arabic body text and headings both use
+     Noto Sans Arabic. */
+  --font-sans: "Atkinson Hyperlegible Next Variable", "Noto Sans Arabic Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", "Noto Sans Arabic Variable", ui-serif, Georgia, serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-width: 320px;
+    min-height: 100dvh;
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  /* One consistent, clearly visible focus ring for every interactive element. */
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  /* Arabic script: slightly larger and airier for comfortable reading, and no
+     negative letter-spacing, which would break the joins between letters. */
+  html:lang(ar) {
+    font-size: 106.25%;
+  }
+
+  :lang(ar) body {
+    line-height: 1.75;
+  }
+
+  :lang(ar) h1,
+  :lang(ar) h2,
+  :lang(ar) h3 {
+    letter-spacing: 0;
+    line-height: 1.4;
+  }
+
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--brand-ink);
+  }
+}
+
+/* Theme switches cross-fade colours briefly; layout never animates. */
+html.theme-transition,
+html.theme-transition * {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@utility animate-rise-in {
+  animation: rise-in 220ms ease-out both;
 }

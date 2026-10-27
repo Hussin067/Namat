@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     # Read the real value with settings.database_url.get_secret_value().
     database_url: SecretStr
 
+    # Browser origin(s) allowed to call the API. Several can be given,
+    # separated by commas (e.g. "https://namat.example,https://www.namat.example").
     frontend_url: str = "http://localhost:5173"
 
     # --- Authentication (JWT access tokens) ---
@@ -56,6 +58,15 @@ class Settings(BaseSettings):
         if db_password and db_password == self.jwt_secret_key.get_secret_value():
             raise ValueError("JWT_SECRET_KEY must not reuse the database password")
         return self
+
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.strip().lower() == "production"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [origin.strip().rstrip("/") for origin in self.frontend_url.split(",") if origin.strip()]
 
 
 @lru_cache

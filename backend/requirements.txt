@@ -16,3 +16,12 @@ pwdlib[argon2]==0.3.1
 PyJWT==2.15.1
 email-validator==2.3.0
 python-multipart==0.0.32
+
+# IANA time-zone data for zoneinfo (Windows has none built in); used by analytics
+tzdata==2026.5
+
+# Medical report PDF: layout (fpdf2), Arabic shaping (uharfbuzz/HarfBuzz) and
+# merging the Noto fonts into one (fonttools). All run locally.
+fpdf2==2.8.9
+uharfbuzz==0.57.0
+fonttools==4.68.0

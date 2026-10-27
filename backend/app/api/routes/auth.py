@@ -2,12 +2,21 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.rate_limit import (
+    LOGIN_FAILURES_PER_ACCOUNT,
+    LOGIN_FAILURES_PER_CLIENT,
+    REGISTRATIONS_PER_CLIENT,
+    check,
+    check_and_record,
+    client_address,
+    limiter,
+)
 from app.core.security import (
     burn_password_check,
     create_access_token,
@@ -46,7 +55,8 @@ def _find_user_by_email(db: DbSession, email: str) -> User | None:
 
 
 @router.post("/register", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
-def register(body: RegisterRequest, db: DbSession) -> User:
+def register(body: RegisterRequest, db: DbSession, request: Request) -> User:
+    check_and_record(REGISTRATIONS_PER_CLIENT, client_address(request))
     if _find_user_by_email(db, body.email) is not None:
         raise _email_taken()
 
@@ -66,22 +76,37 @@ def register(body: RegisterRequest, db: DbSession) -> User:
 def login(
     form: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DbSession,
+    request: Request,
     response: Response,
 ) -> Token:
-    """OAuth2 password flow: the email goes in the `username` form field."""
+    """OAuth2 password flow: the email goes in the `username` form field.
+
+    Failed attempts are limited per account and per client address (429 with
+    Retry-After once used up). The limit applies whether or not the email
+    exists, so it reveals nothing about which accounts exist.
+    """
     email = normalize_email(form.username)
     password = form.password
+    client = client_address(request)
+    check(LOGIN_FAILURES_PER_CLIENT, client)
+    check(LOGIN_FAILURES_PER_ACCOUNT, email[:320])
+
+    def failed() -> HTTPException:
+        limiter.record(LOGIN_FAILURES_PER_CLIENT, client)
+        limiter.record(LOGIN_FAILURES_PER_ACCOUNT, email[:320])
+        return _bad_login()
+
     if len(password) > PASSWORD_MAX_LENGTH or len(email) > 320:
-        raise _bad_login()  # never hash oversized input
+        raise failed()  # never hash oversized input
 
     user = _find_user_by_email(db, email)
     if user is None:
         burn_password_check(password)  # keep timing equal to a wrong password
-        raise _bad_login()
+        raise failed()
 
     valid, upgraded_hash = verify_password(password, user.password_hash)
     if not valid or not user.is_active:
-        raise _bad_login()
+        raise failed()
     if upgraded_hash is not None:  # hashing parameters were strengthened since signup
         user.password_hash = upgraded_hash
         db.commit()

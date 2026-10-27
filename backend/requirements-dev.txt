@@ -1,0 +1,7 @@
+# Development and testing tools (not needed in production)
+-r requirements.txt
+
+pytest==9.1.1
+httpx==0.28.1
+# Reads generated PDFs back in tests/test_reports.py
+pypdf==6.21.3

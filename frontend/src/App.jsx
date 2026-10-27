@@ -1,67 +1,56 @@
-import { useCallback, useEffect, useState } from 'react'
-import { fetchCurrentUser, loginUser, registerUser } from './api.js'
-import AuthForm from './components/AuthForm.jsx'
-import Profile from './components/Profile.jsx'
+import { lazy } from 'react'
+import { Navigate, Route, Routes } from 'react-router'
+import { GuestOnly, RequireAuth } from './auth/RouteGuards.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
+import AppShell from './components/layout/AppShell.jsx'
+import { DemoModeProvider } from './features/episodes/DemoModeProvider.jsx'
+import LoginPage from './pages/LoginPage.jsx'
+import NotFoundPage from './pages/NotFoundPage.jsx'
+import RegisterPage from './pages/RegisterPage.jsx'
+
+// Signed-in pages load on first visit, so the login screen doesn't wait for
+// Chart.js or the report preview. AppShell shows a loading state meanwhile.
+const DailyLogPage = lazy(() => import('./pages/DailyLogPage.jsx'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'))
+const EditEpisodePage = lazy(() => import('./pages/EditEpisodePage.jsx'))
+const EpisodeDetailPage = lazy(() => import('./pages/EpisodeDetailPage.jsx'))
+const HistoryPage = lazy(() => import('./pages/HistoryPage.jsx'))
+const LogEpisodePage = lazy(() => import('./pages/LogEpisodePage.jsx'))
+const MedicalReportPage = lazy(() => import('./pages/MedicalReportPage.jsx'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'))
 
 function App() {
-  // The access token lives only in React memory: never in localStorage or
-  // sessionStorage. Reloading the page or closing the tab logs the user out.
-  const [session, setSession] = useState(null) // { token, user, expiresAt }
-  const [mode, setMode] = useState('login')
-  const [notice, setNotice] = useState(null)
-
-  const logout = useCallback((message = null) => {
-    setSession(null)
-    setMode('login')
-    setNotice(message)
-  }, [])
-
-  // Log out automatically when the token expires.
-  useEffect(() => {
-    if (!session) return undefined
-    const timer = setTimeout(
-      () => logout('Your session expired. Please log in again.'),
-      session.expiresAt - Date.now(),
-    )
-    return () => clearTimeout(timer)
-  }, [session, logout])
-
-  async function handleSubmit(email, password) {
-    setNotice(null)
-    if (mode === 'register') {
-      await registerUser(email, password)
-      setMode('login')
-      setNotice('Account created. You can log in now.')
-      return
-    }
-    const { access_token: token, expires_in: expiresIn } = await loginUser(email, password)
-    const user = await fetchCurrentUser(token)
-    setSession({ token, user, expiresAt: Date.now() + expiresIn * 1000 })
-  }
-
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="max-w-md w-full rounded-2xl bg-white p-8 shadow-lg">
-        <h1 className="text-3xl font-bold text-indigo-600">Migraine Tracker</h1>
-        <p className="mt-2 mb-6 text-slate-600">
-          {session ? 'Your account' : 'Log in or create an account to get started.'}
-        </p>
+    <ErrorBoundary>
+      <Routes>
+        <Route element={<GuestOnly />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
 
-        {session ? (
-          <Profile user={session.user} expiresAt={session.expiresAt} onLogout={() => logout()} />
-        ) : (
-          <AuthForm
-            mode={mode}
-            onModeChange={(next) => {
-              setMode(next)
-              setNotice(null)
-            }}
-            onSubmit={handleSubmit}
-            notice={notice}
-          />
-        )}
-      </div>
-    </main>
+        <Route element={<RequireAuth />}>
+          <Route
+            element={
+              <DemoModeProvider>
+                <AppShell />
+              </DemoModeProvider>
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/episodes/:episodeId" element={<EpisodeDetailPage />} />
+            <Route path="/episodes/:episodeId/edit" element={<EditEpisodePage />} />
+            <Route path="/log" element={<LogEpisodePage />} />
+            <Route path="/daily" element={<DailyLogPage />} />
+            <Route path="/report" element={<MedicalReportPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+        </Route>
+
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </ErrorBoundary>
   )
 }
 
