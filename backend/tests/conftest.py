@@ -2,6 +2,9 @@
 
 The tests use `namat_test`: the same server and role as DATABASE_URL in
 backend/.env, with the database name swapped (override with TEST_DATABASE_URL).
+A test URL derived from DATABASE_URL must also point at this machine
+(localhost), so a hosted URL such as Neon's in DATABASE_URL can never be
+contacted; a remote test database needs an explicit TEST_DATABASE_URL.
 They refuse to run against any database whose name doesn't end in "_test",
 checked three ways: the configured name, the application's own engine (the
 process's DATABASE_URL is switched to the test database before the app is
@@ -34,11 +37,24 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 TEST_PASSWORD = "synthetic-test-password-123"
 
 
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
 def _test_database_url():
     explicit = os.environ.get("TEST_DATABASE_URL")
     url = make_url(explicit) if explicit else make_url(get_settings().database_url.get_secret_value()).set(database="namat_test")
     if not (url.database or "").endswith("_test"):
         raise RuntimeError(f"Refusing to run tests against database {url.database!r}: its name must end in '_test'.")
+    # A test URL derived from DATABASE_URL must point at this machine. If DATABASE_URL
+    # holds a hosted (e.g. Neon production) URL, tests would otherwise connect to that
+    # server. A remote test database is allowed only when named explicitly in
+    # TEST_DATABASE_URL. (No socket path, i.e. host None, is also local.)
+    if not explicit and url.host is not None and url.host not in LOCAL_HOSTS:
+        raise RuntimeError(
+            "Refusing to run tests: DATABASE_URL points at a non-local database server. "
+            "Run tests against a local PostgreSQL, or set TEST_DATABASE_URL explicitly "
+            "to a dedicated test database whose name ends in '_test'."
+        )
     return url
 
 

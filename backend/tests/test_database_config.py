@@ -147,3 +147,42 @@ def test_alembic_prefers_the_direct_url(mode):
 @pytest.mark.parametrize("mode", ["online", "offline"])
 def test_alembic_falls_back_to_database_url(mode):
     assert alembic_host(mode, direct_url=None) == "pooled.namat.invalid"
+
+
+# --- The test-database guard in conftest.py --------------------------------------------------
+
+from tests import conftest  # noqa: E402
+
+NEON_LIKE = "postgresql+psycopg://app:dummy@ep-example-pooler.region.aws.neon.invalid/neondb?sslmode=require"
+
+
+def guard_with(monkeypatch, *, database_url: str, test_url: str | None = None):
+    monkeypatch.setattr(conftest, "get_settings", lambda: settings(database_url=database_url))
+    if test_url is None:
+        monkeypatch.delenv("TEST_DATABASE_URL", raising=False)
+    else:
+        monkeypatch.setenv("TEST_DATABASE_URL", test_url)
+    return conftest._test_database_url()
+
+
+@pytest.mark.parametrize("local_host", ["localhost", "127.0.0.1"])
+def test_guard_derives_namat_test_on_the_local_server(monkeypatch, local_host):
+    url = guard_with(monkeypatch, database_url=f"postgresql+psycopg://app:dummy@{local_host}:5432/namat_dev")
+    assert (url.host, url.database) == (local_host, "namat_test")
+
+
+def test_guard_refuses_a_hosted_database_url(monkeypatch):
+    # e.g. a shell where DATABASE_URL was set to Neon to run `alembic current`.
+    with pytest.raises(RuntimeError, match="non-local database server") as refused:
+        guard_with(monkeypatch, database_url=NEON_LIKE)
+    assert "dummy" not in str(refused.value) and "neon" not in str(refused.value)  # nothing from the URL is echoed
+
+
+def test_guard_allows_an_explicit_remote_test_database(monkeypatch):
+    url = guard_with(monkeypatch, database_url=NEON_LIKE, test_url="postgresql+psycopg://app:dummy@ci-db.invalid/namat_ci_test")
+    assert url.database == "namat_ci_test"
+
+
+def test_guard_still_requires_a_test_database_name(monkeypatch):
+    with pytest.raises(RuntimeError, match="must end in '_test'"):
+        guard_with(monkeypatch, database_url=NEON_LIKE, test_url="postgresql+psycopg://app:dummy@ci-db.invalid/neondb")
