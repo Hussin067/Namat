@@ -19,7 +19,9 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-DATABASE_URL = get_settings().database_url.get_secret_value()
+# DIRECT_DATABASE_URL when it is set (e.g. Neon's direct, non-pooled URL), otherwise
+# DATABASE_URL. The FastAPI app always uses DATABASE_URL (app/db/session.py).
+DATABASE_URL = get_settings().migration_database_url
 
 
 def run_migrations_offline() -> None:
@@ -50,7 +52,7 @@ def _migrate(connection) -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode against the live database."""
     # The test suite passes its own connection (to namat_test); the normal
-    # `alembic` command doesn't, and uses DATABASE_URL from backend/.env.
+    # `alembic` command doesn't, and uses the URL chosen above.
     provided = config.attributes.get("connection")
     if provided is not None:
         _migrate(provided)

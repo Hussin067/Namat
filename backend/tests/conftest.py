@@ -49,6 +49,9 @@ TEST_DATABASE_URL = _test_database_url()
 # could never reach the development database. Environment variables take
 # precedence over backend/.env; this only affects the test process.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL.render_as_string(hide_password=False)
+# Migrations prefer DIRECT_DATABASE_URL; point it at the test database too, so a
+# direct URL in the developer's environment or .env can never be used by tests.
+os.environ["DIRECT_DATABASE_URL"] = os.environ["DATABASE_URL"]
 os.environ["APP_ENV"] = "test"
 get_settings.cache_clear()
 

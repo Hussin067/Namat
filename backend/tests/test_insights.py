@@ -7,7 +7,6 @@ checked by hand.
 
 import re
 from datetime import date, datetime, timedelta, timezone
-from decimal import Decimal
 
 import pytest
 from sqlalchemy import select
@@ -171,12 +170,13 @@ def test_missing_values_are_excluded(db_session, user):
 def test_zero_is_a_value_not_missing(db_session, user):
     owner = user[0]
     for i in range(7):
-        factors(db_session, owner, date(2026, 6, 1) + timedelta(days=i), caffeine_mg=0, alcohol_units=Decimal("0"))
+        factors(db_session, owner, date(2026, 6, 1) + timedelta(days=i), caffeine_mg=0, water_ml=0)
     episode(db_session, owner, utc(2026, 6, 2, 9), intensity=0)
     episode(db_session, owner, utc(2026, 6, 3, 9), intensity=6)
     result, report = run(db_session, owner)
     assert result["factors"]["by_factor"]["caffeine_mg"]["recorded_days"] == 7
-    assert result["factors"]["by_factor"]["alcohol_units"]["recorded_days"] == 7
+    assert result["factors"]["by_factor"]["water_ml"]["recorded_days"] == 7
+    assert "alcohol_units" not in result["factors"]["by_factor"]  # no longer analysed
     assert "daily_factors" not in gap_codes(report)
     assert result["intensity"]["rated_episodes"] == 2 and result["intensity"]["average"] == 3.0  # (0 + 6) / 2
     assert result["intensity"]["distribution"] == {"none": 1, "moderate": 1}

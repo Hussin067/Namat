@@ -44,11 +44,12 @@ describe('sleep form', () => {
 
 describe('daily-factor form', () => {
   it('keeps empty (not recorded) apart from 0 and "no"', () => {
-    const form = { ...emptyFactorForm(NOW), caffeine_mg: '0', skipped_meal: false, alcohol_units: '1.5' }
+    const form = { ...emptyFactorForm(NOW), caffeine_mg: '0', skipped_meal: false, exercise_minutes: '30' }
     const payload = toFactorPayload(form)
     expect(payload.caffeine_mg).toBe(0)
     expect(payload.skipped_meal).toBe(false)
-    expect(payload.alcohol_units).toBe(1.5)
+    expect(payload.exercise_minutes).toBe(30)
+    expect('alcohol_units' in payload).toBe(false)
     expect(payload.stress_level).toBeNull()
     expect(payload.water_ml).toBeNull()
     expect(payload.menstruating).toBeNull()
@@ -57,14 +58,14 @@ describe('daily-factor form', () => {
   it('needs at least one value, and checks ranges', () => {
     expect(validateFactorForm(emptyFactorForm(NOW), NOW).form).toBe('daily.errors.nothingRecorded')
     expect(validateFactorForm({ ...emptyFactorForm(NOW), water_ml: '-5' }, NOW).water_ml).toBe('daily.errors.number')
-    expect(validateFactorForm({ ...emptyFactorForm(NOW), alcohol_units: '1.25' }, NOW).alcohol_units).toBe('daily.errors.number')
+    expect(validateFactorForm({ ...emptyFactorForm(NOW), water_ml: '1.5' }, NOW).water_ml).toBe('daily.errors.number')
     expect(validateFactorForm({ ...emptyFactorForm(NOW), menstruating: false }, NOW)).toEqual({})
   })
 
   it('loads a saved record back into the form without losing zeros', () => {
-    const form = factorFormFrom({ log_date: '2026-06-01', stress_level: 0, caffeine_mg: null, water_ml: 1500, alcohol_units: '0.0', exercise_minutes: null, skipped_meal: null, menstruating: true, notes: null })
+    const form = factorFormFrom({ log_date: '2026-06-01', stress_level: 0, caffeine_mg: null, water_ml: 1500, exercise_minutes: 0, skipped_meal: null, menstruating: true, notes: null })
     expect(form.stress_level).toBe('0')
-    expect(form.alcohol_units).toBe('0')
+    expect(form.exercise_minutes).toBe('0')
     expect(form.caffeine_mg).toBe('')
     expect(form.menstruating).toBe(true)
     expect(form.skipped_meal).toBeNull()

@@ -9,7 +9,6 @@ Every value in a daily-factor record is optional. A field that is left out
 
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
-from decimal import Decimal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -124,7 +123,6 @@ FACTOR_FIELDS = (
     "stress_level",
     "caffeine_mg",
     "water_ml",
-    "alcohol_units",
     "exercise_minutes",
     "skipped_meal",
     "menstruating",
@@ -137,7 +135,6 @@ class _FactorValues(_NotesMixin):
     stress_level: int | None = Field(default=None, ge=0, le=10)
     caffeine_mg: int | None = Field(default=None, ge=0, le=5000)
     water_ml: int | None = Field(default=None, ge=0, le=20000)
-    alcohol_units: Decimal | None = Field(default=None, ge=0, le=99, max_digits=4, decimal_places=1)
     exercise_minutes: int | None = Field(default=None, ge=0, le=1440)
     skipped_meal: bool | None = None
     menstruating: bool | None = None
@@ -180,7 +177,6 @@ class DailyFactorOut(BaseModel):
     stress_level: int | None
     caffeine_mg: int | None
     water_ml: int | None
-    alcohol_units: Decimal | None
     exercise_minutes: int | None
     skipped_meal: bool | None
     menstruating: bool | None

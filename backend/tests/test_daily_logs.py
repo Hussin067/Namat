@@ -125,12 +125,13 @@ def test_sleep_list_is_newest_first_and_filterable(client, alice):
 # --- Daily factors ---------------------------------------------------------------------------
 
 def test_factors_keep_zero_and_no_apart_from_not_recorded(client, alice):
-    body = {"log_date": "2026-06-01", "caffeine_mg": 0, "skipped_meal": False, "alcohol_units": 1.5}
+    body = {"log_date": "2026-06-01", "caffeine_mg": 0, "skipped_meal": False, "exercise_minutes": 30}
     record = client.post(FACTORS, json=body, headers=alice).json()
     assert record["caffeine_mg"] == 0  # recorded zero
     assert record["skipped_meal"] is False  # recorded "no"
     assert record["stress_level"] is None and record["menstruating"] is None  # not recorded
-    assert float(record["alcohol_units"]) == 1.5
+    assert record["exercise_minutes"] == 30
+    assert "alcohol_units" not in record  # alcohol is no longer tracked
 
 
 def test_factors_need_at_least_one_value(client, alice):
@@ -145,7 +146,7 @@ def test_factors_need_at_least_one_value(client, alice):
 
 @pytest.mark.parametrize(
     "values",
-    [{"stress_level": 11}, {"caffeine_mg": -1}, {"exercise_minutes": 1441}, {"alcohol_units": 1.25}, {"water_ml": "lots"}],
+    [{"stress_level": 11}, {"caffeine_mg": -1}, {"exercise_minutes": 1441}, {"caffeine_mg": 1.5}, {"water_ml": "lots"}, {"alcohol_units": 1}],
 )
 def test_invalid_factors_are_rejected(client, alice, values):
     assert client.post(FACTORS, json={"log_date": "2026-06-01"} | values, headers=alice).status_code == 422

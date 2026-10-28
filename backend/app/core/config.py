@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # Read the real value with settings.database_url.get_secret_value().
     database_url: SecretStr
 
+    # Optional direct (non-pooled) connection, used only by Alembic migrations.
+    # On Neon, DATABASE_URL is the pooled "-pooler" URL for the app and this is
+    # the direct URL. When it isn't set, migrations use DATABASE_URL.
+    direct_database_url: SecretStr | None = None
+
     # Browser origin(s) allowed to call the API. Several can be given,
     # separated by commas (e.g. "https://namat.example,https://www.namat.example").
     frontend_url: str = "http://localhost:5173"
@@ -52,13 +57,24 @@ class Settings(BaseSettings):
             )
         return value
 
+    @field_validator("direct_database_url", mode="before")
+    @classmethod
+    def blank_means_not_set(cls, value: object) -> object:
+        # An empty DIRECT_DATABASE_URL= (e.g. a placeholder in .env) means "not configured".
+        return None if isinstance(value, str) and not value.strip() else value
+
     @model_validator(mode="after")
     def secret_differs_from_db_password(self) -> "Settings":
-        db_password = make_url(self.database_url.get_secret_value()).password
-        if db_password and db_password == self.jwt_secret_key.get_secret_value():
-            raise ValueError("JWT_SECRET_KEY must not reuse the database password")
+        for url in (self.database_url, self.direct_database_url):
+            db_password = make_url(url.get_secret_value()).password if url else None
+            if db_password and db_password == self.jwt_secret_key.get_secret_value():
+                raise ValueError("JWT_SECRET_KEY must not reuse the database password")
         return self
 
+    @property
+    def migration_database_url(self) -> str:
+        """The URL Alembic connects with: the direct URL if set, else DATABASE_URL."""
+        return (self.direct_database_url or self.database_url).get_secret_value()
 
     @property
     def is_production(self) -> bool:

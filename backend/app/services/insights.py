@@ -69,7 +69,7 @@ THRESHOLDS = Thresholds()
 TIME_OF_DAY = (("night", 0, 5), ("morning", 5, 12), ("afternoon", 12, 17), ("evening", 17, 21), ("night", 21, 24))
 
 # The daily_factors columns and how they are compared.
-NUMERIC_FACTORS = ("stress_level", "caffeine_mg", "water_ml", "alcohol_units", "exercise_minutes")
+NUMERIC_FACTORS = ("stress_level", "caffeine_mg", "water_ml", "exercise_minutes")
 BOOLEAN_FACTORS = ("skipped_meal", "menstruating")
 
 
@@ -384,7 +384,6 @@ FACTOR_LABELS = {
     "stress_level": "stress level",
     "caffeine_mg": "caffeine",
     "water_ml": "water intake",
-    "alcohol_units": "alcohol",
     "exercise_minutes": "exercise",
     "skipped_meal": "a skipped meal",
     "menstruating": "menstruation",

@@ -45,6 +45,8 @@ class DailyFactor(TimestampMixin, Base):
     stress_level: Mapped[int | None] = mapped_column(SmallInteger)  # 0 .. 10
     caffeine_mg: Mapped[int | None]
     water_ml: Mapped[int | None]
+    # No longer recorded or shown by the app; the column is kept (always NULL for
+    # new records) so the database needs no migration.
     alcohol_units: Mapped[Decimal | None] = mapped_column(Numeric(4, 1))
     exercise_minutes: Mapped[int | None] = mapped_column(SmallInteger)
     skipped_meal: Mapped[bool | None]

@@ -8,7 +8,7 @@ Namat describes what was recorded. It doesn't diagnose, doesn't claim that anyth
 
 - **Accounts:** registration and login (Argon2id passwords, short-lived JWT access tokens kept only in memory).
 - **Headache episodes:** start and end, peak intensity, pain location, aura, symptoms, medication with dose and recorded relief, and notes. Includes a history list and an edit form.
-- **Sleep and daily factors:** sleep times, quality and awakenings, plus stress, caffeine, water, alcohol, exercise, skipped meals and menstruation. "Not recorded" is kept apart from 0 or "no".
+- **Sleep and daily factors:** sleep times, quality and awakenings, plus stress, caffeine, water, exercise, skipped meals and menstruation. "Not recorded" is kept apart from 0 or "no".
 - **Dashboard:** summary cards and charts for any period (7 days to 12 months, or a custom range).
 - **Insights:** patterns in the user's own records, with evidence levels and a statistical check against chance.
 - **Medical report:** all records for a period, previewed in the app and downloaded as a multi-page PDF in English or Arabic.

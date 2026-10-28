@@ -13,7 +13,6 @@ export const AWAKENINGS_MAX = 50
 export const NUMERIC_FACTORS = [
   { name: 'caffeine_mg', max: 5000, step: 1 },
   { name: 'water_ml', max: 20000, step: 50 },
-  { name: 'alcohol_units', max: 99, step: 0.5 },
   { name: 'exercise_minutes', max: 1440, step: 1 },
 ]
 export const STRESS_LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -105,7 +104,6 @@ export function emptyFactorForm(now = new Date()) {
     stress_level: '',
     caffeine_mg: '',
     water_ml: '',
-    alcohol_units: '',
     exercise_minutes: '',
     skipped_meal: null,
     menstruating: null,
@@ -120,7 +118,6 @@ export function factorFormFrom(record) {
     stress_level: text(record.stress_level),
     caffeine_mg: text(record.caffeine_mg),
     water_ml: text(record.water_ml),
-    alcohol_units: text(record.alcohol_units),
     exercise_minutes: text(record.exercise_minutes),
     skipped_meal: record.skipped_meal,
     menstruating: record.menstruating,
@@ -155,7 +152,6 @@ export function toFactorPayload(form) {
     stress_level: number(form.stress_level),
     caffeine_mg: number(form.caffeine_mg),
     water_ml: number(form.water_ml),
-    alcohol_units: number(form.alcohol_units),
     exercise_minutes: number(form.exercise_minutes),
     skipped_meal: form.skipped_meal,
     menstruating: form.menstruating,
