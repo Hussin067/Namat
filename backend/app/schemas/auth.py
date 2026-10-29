@@ -6,7 +6,6 @@ password_hash can never leak into an API response.
 
 import uuid
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -46,10 +45,12 @@ class UserPublic(BaseModel):
     created_at: datetime
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: Literal["bearer"] = "bearer"
-    expires_in: int = Field(description="Seconds until the token expires")
+class SessionOut(BaseModel):
+    """The signed-in user and when the session ends. The token itself is never in a
+    response body: browsers get it as an HttpOnly cookie that JavaScript can't read."""
+
+    user: UserPublic
+    expires_at: datetime = Field(description="When the session cookie and its token expire (UTC)")
 
 
 class ProtectedMessage(BaseModel):

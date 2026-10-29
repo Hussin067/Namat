@@ -13,7 +13,8 @@ from app.core.rate_limit import REPORT_PDFS_PER_USER, REPORTS_PER_USER, RateLimi
 from app.db.session import engine, get_db
 from app.main import app
 
-PUBLIC = {("GET", "/"), ("GET", "/health"), ("POST", "/auth/register"), ("POST", "/auth/login")}
+# Logout is public on purpose: it only expires cookies, and must work after a session ended.
+PUBLIC = {("GET", "/"), ("GET", "/health"), ("POST", "/auth/register"), ("POST", "/auth/login"), ("POST", "/auth/logout")}
 ORIGIN = get_settings().cors_origins[0]
 
 
@@ -30,7 +31,7 @@ ROUTES = sorted(protected_routes())
 
 def test_route_inventory_is_complete():
     # If this fails, a route was added: decide whether it is public, then update PUBLIC.
-    assert len(ROUTES) == 22
+    assert len(ROUTES) == 23
 
 
 @pytest.mark.parametrize("method, path", ROUTES)

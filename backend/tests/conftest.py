@@ -20,6 +20,7 @@ One-time setup (as the postgres superuser):
 """
 
 import os
+import uuid
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -72,6 +73,7 @@ os.environ["APP_ENV"] = "test"
 get_settings.cache_clear()
 
 from app.core.rate_limit import limiter  # noqa: E402  (after the database URL is set)
+from app.core.security import create_access_token  # noqa: E402
 from app.db.session import engine as app_engine, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -130,11 +132,17 @@ def client(db_session: Session) -> Iterator[TestClient]:
 
 @pytest.fixture
 def make_user(client):
-    """Register and log in a synthetic user; returns its Authorization header."""
+    """Register a synthetic user; returns an Authorization header for it.
+
+    Login itself now answers with cookies (tested in test_auth.py). One test client
+    holds one cookie jar, but many tests act as several users at once, so each user
+    gets its own Bearer header instead, issued exactly as the API issues tokens.
+    """
 
     def _make(email: str) -> dict[str, str]:
-        assert client.post("/auth/register", json={"email": email, "password": TEST_PASSWORD}).status_code == 201
-        token = client.post("/auth/login", data={"username": email, "password": TEST_PASSWORD}).json()["access_token"]
+        response = client.post("/auth/register", json={"email": email, "password": TEST_PASSWORD})
+        assert response.status_code == 201
+        token, _ = create_access_token(uuid.UUID(response.json()["id"]))
         return {"Authorization": f"Bearer {token}"}
 
     return _make

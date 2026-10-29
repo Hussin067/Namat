@@ -79,14 +79,18 @@ def test_registration_cannot_set_privileged_fields(client):
 
 # --- Login ---------------------------------------------------------------------------------
 
-def test_login_returns_a_short_lived_bearer_token_that_is_not_cached(client, account):
+def test_login_starts_a_short_lived_cookie_session_that_is_not_cached(client, account):
     response = login(client, "Auth.A@Example.com")  # any case works
     assert response.status_code == 200
     body = response.json()
-    assert body["token_type"] == "bearer"
-    assert body["expires_in"] == get_settings().access_token_expire_minutes * 60
+    assert set(body) == {"user", "expires_at"}  # the token is never in the body
+    assert body["user"]["id"] == str(account.id)
+    lifetime = datetime.fromisoformat(body["expires_at"]) - datetime.now(timezone.utc)
+    assert timedelta(minutes=get_settings().access_token_expire_minutes - 1) < lifetime <= timedelta(
+        minutes=get_settings().access_token_expire_minutes
+    )
     assert response.headers["cache-control"] == "no-store"
-    me = client.get("/auth/me", headers={"Authorization": f"Bearer {body['access_token']}"})
+    me = client.get("/auth/me")  # the client sends the session cookie back
     assert me.json()["id"] == str(account.id)
 
 

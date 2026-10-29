@@ -8,12 +8,19 @@
 - Cache-Control: no-store by default: almost every response carries personal
   health data, and none of it may be kept by browsers or shared caches.
   Endpoints that set their own Cache-Control keep it.
+- Origin check (CSRF defence in depth): a browser request that changes data
+  (POST, PUT, PATCH, DELETE) is refused with 403 unless its Origin header is the
+  API itself or one of the allowed frontend origins (FRONTEND_URL). This also
+  covers login, registration and logout, which have no session to protect them.
+  Requests without an Origin header (API clients, tests) are unaffected; browsers
+  always send it on cross-site requests that change data.
 
 Only the error type and the request path are logged (paths hold ids, never
 health data). Full tracebacks are logged outside production only.
 """
 
 import logging
+from urllib.parse import urlsplit
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -34,9 +41,26 @@ API_CSP = "default-src 'none'; frame-ancestors 'none'"
 DOCS_PATHS = ("/docs", "/redoc", "/openapi.json")
 
 
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def origin_allowed(request: Request) -> bool:
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True
+    origin = origin.rstrip("/")
+    if origin in get_settings().cors_origins:
+        return True
+    # The API's own pages (e.g. the development /docs) are same-origin.
+    return urlsplit(origin).netloc == request.headers.get("host", "")
+
+
 async def harden_responses(request: Request, call_next):
     try:
-        response = await call_next(request)
+        if request.method in UNSAFE_METHODS and not origin_allowed(request):
+            response = JSONResponse({"detail": "Request origin not allowed."}, status_code=403)
+        else:
+            response = await call_next(request)
     except Exception as exc:  # anything a route didn't turn into an HTTP error
         logger.error(
             "Unhandled %s on %s %s",

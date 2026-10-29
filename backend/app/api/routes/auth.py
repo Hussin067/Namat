@@ -1,5 +1,12 @@
-"""Registration, login and current-user endpoints."""
+"""Registration, login, logout and current-user endpoints.
 
+A successful login sets two cookies (see set_session_cookies):
+- the session cookie: the signed JWT. HttpOnly, so JavaScript can never read it;
+- the CSRF cookie: a random per-session value that the app's own pages read and
+  send back in the X-CSRF-Token header on requests that change data.
+"""
+
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -7,7 +14,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentSession, CurrentUser, DbSession
+from app.core.config import get_settings
 from app.core.rate_limit import (
     LOGIN_FAILURES_PER_ACCOUNT,
     LOGIN_FAILURES_PER_CLIENT,
@@ -21,6 +29,7 @@ from app.core.security import (
     burn_password_check,
     create_access_token,
     hash_password,
+    new_csrf_token,
     verify_password,
 )
 from app.models import User
@@ -28,7 +37,7 @@ from app.schemas.auth import (
     PASSWORD_MAX_LENGTH,
     ProtectedMessage,
     RegisterRequest,
-    Token,
+    SessionOut,
     UserPublic,
     normalize_email,
 )
@@ -47,6 +56,27 @@ def _bad_login() -> HTTPException:
         detail="Incorrect email or password.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+def set_session_cookies(response: Response, token: str, csrf: str, lifetime_seconds: int) -> None:
+    """Both cookies share the token's lifetime, Path=/ and SameSite; only the session one is HttpOnly."""
+    settings = get_settings()
+    common = {
+        "max_age": lifetime_seconds,
+        "path": "/",
+        "secure": settings.cookies_secure,
+        "samesite": settings.cookie_samesite,
+    }
+    response.set_cookie(settings.session_cookie_name, token, httponly=True, **common)
+    response.set_cookie(settings.csrf_cookie_name, csrf, httponly=False, **common)
+
+
+def clear_session_cookies(response: Response) -> None:
+    """Expire both cookies, with the same attributes they were set with."""
+    settings = get_settings()
+    common = {"path": "/", "secure": settings.cookies_secure, "samesite": settings.cookie_samesite}
+    response.delete_cookie(settings.session_cookie_name, httponly=True, **common)
+    response.delete_cookie(settings.csrf_cookie_name, httponly=False, **common)
 
 
 def _find_user_by_email(db: DbSession, email: str) -> User | None:
@@ -72,14 +102,17 @@ def register(body: RegisterRequest, db: DbSession, request: Request) -> User:
     return user
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=SessionOut)
 def login(
     form: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DbSession,
     request: Request,
     response: Response,
-) -> Token:
-    """OAuth2 password flow: the email goes in the `username` form field.
+) -> SessionOut:
+    """OAuth2 password form: the email goes in the `username` form field.
+
+    On success the session is set as cookies; the response body holds the user and
+    the expiry time, never the token.
 
     Failed attempts are limited per account and per client address (429 with
     Retry-After once used up). The limit applies whether or not the email
@@ -111,9 +144,26 @@ def login(
         user.password_hash = upgraded_hash
         db.commit()
 
-    token, expires_in = create_access_token(user.id)
-    response.headers["Cache-Control"] = "no-store"  # tokens must not be cached (RFC 6749)
-    return Token(access_token=token, expires_in=expires_in)
+    csrf = new_csrf_token()
+    token, expires_in = create_access_token(user.id, csrf=csrf)
+    set_session_cookies(response, token, csrf, expires_in)
+    response.headers["Cache-Control"] = "no-store"  # sessions must not be cached (RFC 6749)
+    return SessionOut(user=user, expires_at=datetime.now(timezone.utc) + timedelta(seconds=expires_in))
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout() -> Response:
+    """End the browser session: both cookies are expired. Works even if the session already ended."""
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    clear_session_cookies(response)
+    return response
+
+
+@router.get("/session", response_model=SessionOut)
+def read_session(session: CurrentSession) -> SessionOut:
+    """The current user and when the session ends; the app calls this on start-up."""
+    user, claims = session
+    return SessionOut(user=user, expires_at=datetime.fromtimestamp(claims["exp"], timezone.utc))
 
 
 @router.get("/me", response_model=UserPublic)

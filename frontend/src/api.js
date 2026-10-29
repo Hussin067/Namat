@@ -1,11 +1,30 @@
 // All calls to the Namat API go through this file.
 // VITE_ variables are bundled into public JavaScript: never put secrets in them.
-// In development the API defaults to http://localhost:8000. A production build
-// never falls back to localhost: without VITE_API_BASE_URL it calls the API on
-// the same origin (e.g. behind a reverse proxy).
-export const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
-).replace(/\/$/, '')
+//
+// The API is reached at /api on the app's own site: the Vite dev server proxies
+// it to http://localhost:8000 (vite.config.js) and Vercel rewrites it to the
+// Render API (vercel.json). Same site means the session cookie is first-party.
+// VITE_API_BASE_URL can point somewhere else (that needs the cross-site cookie
+// settings described in backend/app/core/config.py).
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
+
+// Sessions live in an HttpOnly cookie set by the API, which JavaScript can't read.
+// The readable CSRF cookie holds a per-session value that requests changing data
+// must echo in the X-CSRF-Token header. (__Host- names are used over HTTPS.)
+const CSRF_COOKIES = ['__Host-namat_csrf', 'namat_csrf']
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+function readCsrfToken() {
+  const cookies = Object.fromEntries(
+    document.cookie
+      .split(';')
+      .map((part) => part.trim().split('='))
+      .filter(([name]) => name)
+      .map(([name, ...rest]) => [name, decodeURIComponent(rest.join('='))]),
+  )
+  const name = CSRF_COOKIES.find((n) => cookies[n])
+  return name ? cookies[name] : null
+}
 
 /**
  * `key` names a translated message (see src/i18n/messages), so the UI shows
@@ -30,10 +49,16 @@ function errorKey(status, path) {
   return 'errors.generic'
 }
 
-async function request(path, { responseType, ...options } = {}) {
+async function request(path, { responseType, method = 'GET', headers = {}, ...options } = {}) {
+  const allHeaders = { ...headers }
+  if (UNSAFE_METHODS.has(method)) {
+    const csrf = readCsrfToken()
+    if (csrf) allHeaders['X-CSRF-Token'] = csrf
+  }
   let response
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, options)
+    // credentials: 'include' sends the session cookie (also when the API is on another origin).
+    response = await fetch(`${API_BASE_URL}${path}`, { ...options, method, headers: allHeaders, credentials: 'include' })
   } catch (error) {
     if (error?.name === 'AbortError') throw error // cancelled on purpose: not a failure
     throw new ApiError('errors.network', 0)
@@ -59,7 +84,10 @@ export function registerUser(email, password) {
   })
 }
 
-// OAuth2 password flow: form-encoded, with the email in the "username" field.
+/**
+ * Form-encoded, with the email in the "username" field. The API answers with
+ * { user, expires_at } and sets the session cookies; the token never reaches JavaScript.
+ */
 export function loginUser(email, password) {
   return request('/auth/login', {
     method: 'POST',
@@ -67,21 +95,29 @@ export function loginUser(email, password) {
   })
 }
 
-export function fetchCurrentUser(token) {
-  return request('/auth/me', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+/** The current session ({ user, expires_at }) if the cookie is valid; throws 401 otherwise. */
+export function fetchSession({ signal } = {}) {
+  return request('/auth/session', { signal })
+}
+
+export function fetchCurrentUser() {
+  return request('/auth/me')
+}
+
+/** Ends the session on the server (expires both cookies). */
+export function logoutUser() {
+  return request('/auth/logout', { method: 'POST' })
 }
 
 /**
  * A request on behalf of the signed-in user. Pages don't call this directly:
- * they use `authRequest` from useAuth(), which supplies the token without ever
- * exposing it. Resolves to the parsed JSON body (null for 204 No Content), or,
- * with responseType: 'file', to { blob, filename }.
+ * they use `authRequest` from useAuth(), which ends the session on a 401.
+ * Resolves to the parsed JSON body (null for 204 No Content), or, with
+ * responseType: 'file', to { blob, filename }.
  * Pass an AbortController `signal` to cancel a request that is no longer needed.
  */
-export function apiRequest(path, { token, method = 'GET', body, signal, responseType } = {}) {
-  const headers = { Authorization: `Bearer ${token}` }
+export function apiRequest(path, { method = 'GET', body, signal, responseType } = {}) {
+  const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   return request(path, {
     method,

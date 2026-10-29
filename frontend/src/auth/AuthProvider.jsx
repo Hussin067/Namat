@@ -1,71 +1,100 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ApiError, apiRequest, fetchCurrentUser, loginUser, registerUser } from '../api.js'
+import { apiRequest, fetchCurrentUser, fetchSession, loginUser, logoutUser, registerUser } from '../api.js'
 import { AuthContext } from './auth-context.js'
 
+/**
+ * The session lives in an HttpOnly cookie set by the API: JavaScript never sees
+ * the token, and nothing is kept in localStorage or sessionStorage. On start-up
+ * (including after a refresh or in a new tab) the app asks the API whether the
+ * cookie still holds a valid session; until that answer arrives, status is
+ * 'checking' and the route guards wait instead of redirecting.
+ */
 export default function AuthProvider({ children }) {
-  // The access token lives only in React memory: never in localStorage,
-  // sessionStorage or cookies. Reloading the page or closing the tab logs out.
-  const [session, setSession] = useState(null) // { token, user, expiresAt }
+  // status: 'checking' | 'authenticated' | 'anonymous'
+  const [state, setState] = useState({ status: 'checking', user: null, expiresAt: null })
   const [endReason, setEndReason] = useState(null)
 
-  const logout = useCallback((reason = 'signed-out') => {
-    setSession(null)
+  const endSession = useCallback((reason) => {
+    setState({ status: 'anonymous', user: null, expiresAt: null })
     setEndReason(reason)
   }, [])
 
-  // End the session when the token expires.
-  useEffect(() => {
-    if (!session) return undefined
-    const timer = setTimeout(() => logout('expired'), session.expiresAt - Date.now())
-    return () => clearTimeout(timer)
-  }, [session, logout])
-
-  const login = useCallback(async (email, password) => {
-    const { access_token: token, expires_in: expiresIn } = await loginUser(email, password)
-    const user = await fetchCurrentUser(token)
+  const startSession = useCallback(({ user, expires_at: expiresAt }) => {
     setEndReason(null)
-    setSession({ token, user, expiresAt: Date.now() + expiresIn * 1000 })
+    setState({ status: 'authenticated', user, expiresAt: new Date(expiresAt).getTime() })
   }, [])
+
+  // Restore the session from the cookie, once, when the app starts.
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchSession({ signal: controller.signal }).then(startSession, (error) => {
+      if (error?.name === 'AbortError') return
+      // 401 (no cookie, or an expired one) or the API is unreachable: not signed in.
+      setState({ status: 'anonymous', user: null, expiresAt: null })
+    })
+    return () => controller.abort()
+  }, [startSession])
+
+  // The cookie expires with the token; end the session in the app at the same moment.
+  const expiresAt = state.expiresAt
+  useEffect(() => {
+    if (!expiresAt) return undefined
+    const timer = setTimeout(() => endSession('expired'), Math.max(0, expiresAt - Date.now()))
+    return () => clearTimeout(timer)
+  }, [expiresAt, endSession])
+
+  const login = useCallback(async (email, password) => startSession(await loginUser(email, password)), [startSession])
 
   const register = useCallback((email, password) => registerUser(email, password), [])
 
-  /** Re-fetch /auth/me. A 401 means the token is no longer valid: end the session. */
+  /** Ask the API to expire the cookies, then forget the session locally (even if offline). */
+  const logout = useCallback(
+    async (reason = 'signed-out') => {
+      try {
+        await logoutUser()
+      } catch {
+        // Unreachable API: the cookie still expires on its own.
+      }
+      endSession(reason)
+    },
+    [endSession],
+  )
+
+  /** Re-fetch /auth/me. A 401 means the session is no longer valid: end it. */
   const refreshUser = useCallback(async () => {
-    if (!session) return null
     try {
-      const user = await fetchCurrentUser(session.token)
-      setSession((current) => (current ? { ...current, user } : current))
+      const user = await fetchCurrentUser()
+      setState((current) => (current.status === 'authenticated' ? { ...current, user } : current))
       return user
     } catch (error) {
-      if (error.status === 401) logout('expired')
+      if (error.status === 401) endSession('expired')
       throw error
     }
-  }, [session, logout])
+  }, [endSession])
 
   /**
-   * Call the API as the signed-in user. The token is added here and never
-   * handed to pages. A 401 means the token expired or the account is gone,
-   * so the session ends. Its identity only changes on login/logout.
+   * Call the API as the signed-in user (the browser sends the cookie). A 401 means
+   * the session expired or the account is gone, so the session ends.
    */
-  const token = session?.token ?? null
   const authRequest = useCallback(
     async (path, options = {}) => {
-      if (!token) throw new ApiError('errors.sessionExpired', 401)
       try {
-        return await apiRequest(path, { ...options, token })
+        return await apiRequest(path, options)
       } catch (error) {
-        if (error.status === 401) logout('expired')
+        if (error.status === 401) endSession('expired')
         throw error
       }
     },
-    [token, logout],
+    [endSession],
   )
 
   const value = useMemo(
     () => ({
-      user: session?.user ?? null,
-      isAuthenticated: Boolean(session),
-      expiresAt: session?.expiresAt ?? null,
+      user: state.user,
+      status: state.status,
+      isChecking: state.status === 'checking',
+      isAuthenticated: state.status === 'authenticated',
+      expiresAt: state.expiresAt,
       endReason,
       login,
       register,
@@ -73,7 +102,7 @@ export default function AuthProvider({ children }) {
       refreshUser,
       authRequest,
     }),
-    [session, endReason, login, register, logout, refreshUser, authRequest],
+    [state, endReason, login, register, logout, refreshUser, authRequest],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

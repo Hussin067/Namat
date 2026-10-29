@@ -41,6 +41,7 @@ const en = {
     tooManyAttempts: 'Too many attempts. Please wait a few minutes and try again.',
   },
   auth: {
+    checkingSession: 'Checking your session…',
     privacy: 'Your records are private to your account. Passwords are never stored in readable form.',
     showPassword: 'Show password',
     fields: { email: 'Email', password: 'Password', confirm: 'Confirm password' },
@@ -55,7 +56,7 @@ const en = {
       registeredTitle: 'Account created',
       registeredBody: 'Log in with your new password to continue.',
       expiredTitle: 'Your session ended',
-      expiredBody: 'For your privacy, sessions end after a short time or when the page reloads. Please log in again.',
+      expiredBody: 'For your privacy, sessions end after a short time. Please log in again.',
       loggedOut: 'You have logged out.',
     },
     register: {
@@ -547,7 +548,7 @@ const en = {
     language: 'Language',
     languageDescription: 'Choose the language for the whole app.',
     session: 'Session',
-    sessionDescription: 'For your privacy, you’re signed out automatically at {time}, or when this page reloads.',
+    sessionDescription: 'For your privacy, you’re signed out automatically at {time}.',
   },
   notFound: {
     title: 'We couldn’t find that page',

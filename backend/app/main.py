@@ -22,14 +22,16 @@ app = FastAPI(
 # an unexpected 500 reaches the browser with its CORS headers.
 app.middleware("http")(harden_responses)
 
-# Only the configured frontend origin(s) may call the API from a browser.
-# Credentials (cookies) are off: the token travels in the Authorization header.
+# Only the configured frontend origin(s) may call the API from a browser. In
+# production the frontend reaches the API through its own site (Vercel /api
+# rewrite), so CORS only matters for a direct cross-origin setup. Credentials
+# are allowed so the session cookie is sent; origins are never a wildcard.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
     # Lets the browser read the PDF's suggested (safe) file name, and how long
     # to wait after a 429.
     expose_headers=["Content-Disposition", "Retry-After"],

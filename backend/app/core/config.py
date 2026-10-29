@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     # Short-lived tokens limit the damage if one is stolen.
     access_token_expire_minutes: int = Field(default=20, ge=5, le=60)
 
+    # --- Session cookie (browsers) ---
+    # "lax" when the frontend reaches the API on its own site (Vercel /api proxy in
+    # production, Vite proxy in development). "none" only if the browser calls the
+    # API directly from another site; that needs Secure, and some browsers block it.
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    # Secure cookies (HTTPS only). Unset means: on in production, off in development.
+    cookie_secure: bool | None = None
+
     @field_validator("jwt_secret_key")
     @classmethod
     def secret_must_be_strong(cls, value: SecretStr) -> SecretStr:
@@ -70,6 +78,26 @@ class Settings(BaseSettings):
             if db_password and db_password == self.jwt_secret_key.get_secret_value():
                 raise ValueError("JWT_SECRET_KEY must not reuse the database password")
         return self
+
+    @model_validator(mode="after")
+    def samesite_none_needs_secure(self) -> "Settings":
+        if self.cookie_samesite == "none" and not self.cookies_secure:
+            raise ValueError("COOKIE_SAMESITE=none requires secure cookies (COOKIE_SECURE=true or APP_ENV=production)")
+        return self
+
+    @property
+    def cookies_secure(self) -> bool:
+        return self.is_production if self.cookie_secure is None else self.cookie_secure
+
+    @property
+    def session_cookie_name(self) -> str:
+        # The __Host- prefix makes the browser enforce Secure, Path=/ and no Domain,
+        # so no other subdomain can set or overwrite the cookie. It needs HTTPS.
+        return "__Host-namat_session" if self.cookies_secure else "namat_session"
+
+    @property
+    def csrf_cookie_name(self) -> str:
+        return "__Host-namat_csrf" if self.cookies_secure else "namat_csrf"
 
     @property
     def migration_database_url(self) -> str:
