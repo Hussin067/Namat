@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
-import { CirclePlus, FileText, History, LayoutDashboard, LogOut, NotebookPen, UserRound } from 'lucide-react'
+import { CirclePlus, ClipboardPlus, FileText, History, LayoutDashboard, LogOut, NotebookPen, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/auth-context.js'
 import { useI18n } from '../../i18n/i18n-context.js'
 import LanguageSwitch from '../ui/LanguageSwitch.jsx'
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/history', key: 'history', icon: History },
   { to: '/log', key: 'log', icon: CirclePlus },
   { to: '/daily', key: 'daily', icon: NotebookPen },
+  { to: '/medical-history', key: 'medical', icon: ClipboardPlus },
   { to: '/report', key: 'report', icon: FileText },
   { to: '/profile', key: 'profile', icon: UserRound },
 ]

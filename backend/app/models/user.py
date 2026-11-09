@@ -10,6 +10,7 @@ from app.db.base import Base, TimestampMixin, uuid_pk
 if TYPE_CHECKING:
     from app.models.daily_factor import DailyFactor
     from app.models.episode import HeadacheEpisode
+    from app.models.medical_history import MedicalAllergy, MedicalCondition, MedicalNotes, MedicalProcedure
     from app.models.medication import MedicationDose
     from app.models.sleep import SleepLog
 
@@ -40,6 +41,18 @@ class User(TimestampMixin, Base):
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
     daily_factors: Mapped[list[DailyFactor]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    medical_conditions: Mapped[list[MedicalCondition]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    medical_allergies: Mapped[list[MedicalAllergy]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    medical_procedures: Mapped[list[MedicalProcedure]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+    medical_notes: Mapped[MedicalNotes | None] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
 

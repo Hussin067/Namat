@@ -16,6 +16,7 @@ const EditEpisodePage = lazy(() => import('./pages/EditEpisodePage.jsx'))
 const EpisodeDetailPage = lazy(() => import('./pages/EpisodeDetailPage.jsx'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage.jsx'))
 const LogEpisodePage = lazy(() => import('./pages/LogEpisodePage.jsx'))
+const MedicalHistoryPage = lazy(() => import('./pages/MedicalHistoryPage.jsx'))
 const MedicalReportPage = lazy(() => import('./pages/MedicalReportPage.jsx'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'))
 
@@ -42,6 +43,7 @@ function App() {
             <Route path="/episodes/:episodeId/edit" element={<EditEpisodePage />} />
             <Route path="/log" element={<LogEpisodePage />} />
             <Route path="/daily" element={<DailyLogPage />} />
+            <Route path="/medical-history" element={<MedicalHistoryPage />} />
             <Route path="/report" element={<MedicalReportPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>

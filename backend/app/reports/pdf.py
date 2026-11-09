@@ -12,7 +12,7 @@
   either language renders in either report, without fpdf2's fallback-font
   switching (which garbled some text in testing). The merged files are built
   once per process in the system temp folder; they are never committed.
-- Text the user typed (notes) gets its own paragraph and its direction comes
+- Text the user typed (notes, medical-history names and details) gets its own paragraph and its direction comes
   from its own first letter, so an English note in an Arabic report (or the
   reverse) keeps its word order.
 - Tables repeat their header row on every page they continue onto; long
@@ -324,6 +324,18 @@ class ReportPDF(FPDF):
             self.para(block["notes"], user_text=True, after=1)
         self.ln(2.5)
 
+    def history_item(self, block: dict):
+        """One medical-history item. The name and details are the user's own words,
+        so each gets its own paragraph with its direction taken from its content."""
+        self.keep(28)
+        self.para(block["name"], size=BODY + 0.5, bold=True, user_text=True, after=0.5)
+        if block["fields"]:
+            self.key_values([(f["label"], f["value"]) for f in block["fields"]], label_share=0.26, size=SMALL + 0.5)
+        for detail in block["details"]:
+            self.para(detail["label"], size=SMALL + 0.5, bold=True, color=MUTED, after=0.5)
+            self.para(detail["text"], user_text=True, after=1)
+        self.ln(1.5)
+
     def observation(self, block: dict):
         self.keep(45)
         self.set_font(self.family, "B", 10.5)
@@ -365,6 +377,8 @@ class ReportPDF(FPDF):
             self.bars(b)
         elif kind == "episode":
             self.episode(b)
+        elif kind == "history_item":
+            self.history_item(b)
         elif kind == "observation":
             self.observation(b)
         elif kind == "callout":

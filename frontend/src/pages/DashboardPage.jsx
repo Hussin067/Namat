@@ -13,6 +13,7 @@ import { filtersFromSearch, filtersToSearch } from '../features/analytics/analyt
 import DateRangeFilter from '../features/analytics/DateRangeFilter.jsx'
 import { formatRange } from '../features/analytics/format.js'
 import InsightsSection from '../features/insights/InsightsSection.jsx'
+import MedicalHistoryContext from '../features/medical/MedicalHistoryContext.jsx'
 import { useDashboardAnalytics } from '../features/analytics/useDashboardAnalytics.js'
 import EpisodeList from '../features/episodes/components/EpisodeList.jsx'
 import IntensityBadge from '../features/episodes/components/IntensityBadge.jsx'
@@ -191,6 +192,8 @@ export default function DashboardPage() {
         )}
 
         <InsightsSection filters={filters} />
+
+        <MedicalHistoryContext />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <HeadacheFrequencyChart points={data.frequency} interval={data.range.interval} />

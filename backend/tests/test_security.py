@@ -31,7 +31,15 @@ ROUTES = sorted(protected_routes())
 
 def test_route_inventory_is_complete():
     # If this fails, a route was added: decide whether it is public, then update PUBLIC.
-    assert len(ROUTES) == 23
+    assert len(ROUTES) == 41
+    medical = {(m, re.sub(r"[0-9a-f-]{36}", "{id}", p)) for m, p in ROUTES if p.startswith("/medical-history")}
+    assert medical == {
+        ("GET", "/medical-history"),
+        ("GET", "/medical-history/notes"),
+        ("PUT", "/medical-history/notes"),
+        *{(m, f"/medical-history/{kind}") for kind in ("conditions", "allergies", "procedures") for m in ("GET", "POST")},
+        *{(m, f"/medical-history/{kind}/{{id}}") for kind in ("conditions", "allergies", "procedures") for m in ("GET", "PATCH", "DELETE")},
+    }
 
 
 @pytest.mark.parametrize("method, path", ROUTES)
@@ -40,7 +48,7 @@ def test_every_non_public_route_requires_a_token(client, method, path):
     assert response.status_code == 401, f"{method} {path} answered {response.status_code}"
 
 
-@pytest.mark.parametrize("path", ["/episodes", "/sleep-logs", "/daily-factors", "/analytics/dashboard", "/insights", "/auth/me"])
+@pytest.mark.parametrize("path", ["/episodes", "/sleep-logs", "/daily-factors", "/analytics/dashboard", "/insights", "/auth/me", "/medical-history"])
 def test_health_data_responses_are_never_cached_and_carry_security_headers(client, make_user, path):
     response = client.get(path, headers=make_user("headers@example.com"))
     assert response.status_code == 200

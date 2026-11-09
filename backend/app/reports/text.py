@@ -73,6 +73,7 @@ STRINGS: dict[str, dict] = {
         "range": "{start} – {end}",
         "sections": {
             "info": "Report information",
+            "medical_history": "Medical history (reported by you)",
             "overview": "Headache overview",
             "history": "Episode history",
             "pain": "Pain characteristics",
@@ -85,6 +86,35 @@ STRINGS: dict[str, dict] = {
             "questions": "Questions to discuss with a doctor",
             "limitations": "Missing information and limitations",
             "disclaimer": "Medical disclaimer",
+        },
+        # Medical history (entered by the user; never analysed)
+        "medical_history": {
+            "intro": "This is the medical history you entered in Namat, shown as you reported it. Namat doesn't check it, and it is kept apart from the recorded episodes and from Namat's pattern analysis, which don't use it.",
+            "empty": "No medical history was entered.",
+            "groups": {
+                "chronic_disease": "Long-term conditions",
+                "headache_disorder": "Headache disorders",
+                "associated_condition": "Other conditions you listed",
+                "serious_history": "Serious past illnesses",
+                "allergies": "Allergies",
+                "procedures": "Surgeries and procedures",
+                "notes": "Additional notes",
+            },
+            "status": "Status",
+            "confirmation": "Confirmation",
+            "date": "Date",
+            "type": "Type",
+            "severity": "Severity",
+            "reaction": "Reaction",
+            "notes": "Notes",
+            "statuses": {"active": "Active", "resolved": "Resolved", "monitoring": "Being monitored"},
+            "confirmations": {
+                "clinician_confirmed": "Confirmed by a clinician (as you reported)",
+                "self_reported": "Self-reported (not confirmed by a clinician)",
+                "unsure": "Unsure",
+            },
+            "types": {"medication": "Medication", "food": "Food", "environmental": "Environmental", "other": "Other"},
+            "severities": {"mild": "Mild", "moderate": "Moderate", "severe": "Severe", "unknown": "Not known"},
         },
         # A. Report information
         "info": {
@@ -314,6 +344,7 @@ STRINGS: dict[str, dict] = {
             "insufficient": "With fewer than {min} episodes, no pattern analysis was done.",
             "sleep_variation": "Recorded sleep lengths are too similar to compare shorter and longer nights.",
             "medication": "Medication doses not linked to an episode can't be related to specific episodes.",
+            "medical_history": "Medical history is shown as you entered it. Namat doesn't check it, and the confirmation shown for each item is what you selected.",
         },
         # Labels shared by several sections
         "locations": {
@@ -359,6 +390,7 @@ STRINGS: dict[str, dict] = {
         },
         "units": {},
         "symptom_names": {},
+        "condition_names": {},
         "counts": {
             "episodes": {"one": "{n} episode", "other": "{n} episodes"},
             "days": {"one": "{n} day", "other": "{n} days"},
@@ -387,6 +419,7 @@ STRINGS: dict[str, dict] = {
         "range": "{start} – {end}",
         "sections": {
             "info": "معلومات التقرير",
+            "medical_history": "التاريخ المرضي (كما أبلغت عنه)",
             "overview": "نظرة عامة على الصداع",
             "history": "سجل النوبات بالترتيب الزمني",
             "pain": "خصائص الألم",
@@ -399,6 +432,34 @@ STRINGS: dict[str, dict] = {
             "questions": "أسئلة للنقاش مع الطبيب",
             "limitations": "المعلومات الناقصة وحدود التقرير",
             "disclaimer": "إخلاء المسؤولية الطبية",
+        },
+        "medical_history": {
+            "intro": "هذا هو التاريخ المرضي الذي أدخلته في نمط، معروضًا كما ذكرته. لا يتحقق نمط منه، وهو منفصل عن النوبات المسجّلة وعن تحليل الأنماط في نمط، اللذين لا يستخدمانه.",
+            "empty": "لم يُدخَل أي تاريخ مرضي.",
+            "groups": {
+                "chronic_disease": "الحالات طويلة الأمد",
+                "headache_disorder": "اضطرابات الصداع",
+                "associated_condition": "حالات أخرى ذكرتها",
+                "serious_history": "أمراض خطيرة سابقة",
+                "allergies": "الحساسية",
+                "procedures": "العمليات الجراحية والإجراءات",
+                "notes": "ملاحظات إضافية",
+            },
+            "status": "الحالة",
+            "confirmation": "التأكيد",
+            "date": "التاريخ",
+            "type": "النوع",
+            "severity": "الشدة",
+            "reaction": "التفاعل",
+            "notes": "ملاحظات",
+            "statuses": {"active": "قائمة حاليًا", "resolved": "لم تعد قائمة", "monitoring": "تحت المتابعة"},
+            "confirmations": {
+                "clinician_confirmed": "أكّدها طبيب (حسب ما ذكرت)",
+                "self_reported": "إبلاغ ذاتي (لم يؤكدها طبيب)",
+                "unsure": "غير متأكد",
+            },
+            "types": {"medication": "دواء", "food": "طعام", "environmental": "بيئية", "other": "أخرى"},
+            "severities": {"mild": "خفيفة", "moderate": "متوسطة", "severe": "شديدة", "unknown": "غير معروفة"},
         },
         "info": {
             "generated": "تاريخ الإنشاء",
@@ -616,6 +677,7 @@ STRINGS: dict[str, dict] = {
             "insufficient": "مع أقل من {min} نوبات، لم يُجرَ تحليل للأنماط.",
             "sleep_variation": "مدد النوم المسجّلة متقاربة جدًا بحيث لا يمكن المقارنة بين الليالي الأقصر والأطول.",
             "medication": "لا يمكن ربط جرعات الدواء غير المرتبطة بنوبة بنوبات محددة.",
+            "medical_history": "يُعرض التاريخ المرضي كما أدخلته. لا يتحقق نمط منه، والتأكيد المعروض لكل بند هو ما اخترته.",
         },
         "locations": {
             "left": "الجانب الأيسر",
@@ -674,6 +736,38 @@ STRINGS: dict[str, dict] = {
             "Fatigue": "إرهاق",
             "Throbbing pain": "ألم نابض",
             "Pain worse with activity": "ألم يزداد مع الحركة",
+        },
+        # The app's predefined medical-history options, stored in English
+        # (same names and translations as frontend/src/features/medical).
+        "condition_names": {
+            "Diabetes": "داء السكري",
+            "Asthma": "الربو",
+            "Heart disease": "أمراض القلب",
+            "Kidney disease": "أمراض الكلى",
+            "Epilepsy": "الصرع",
+            "Depression or anxiety": "الاكتئاب أو القلق",
+            "Migraine": "الصداع النصفي",
+            "Migraine with aura": "الصداع النصفي مع هالة",
+            "Migraine without aura": "الصداع النصفي بدون هالة",
+            "Chronic migraine": "الصداع النصفي المزمن",
+            "Tension-type headache": "صداع التوتر",
+            "Cluster headache": "الصداع العنقودي",
+            "Chronic daily headache": "الصداع اليومي المزمن",
+            "Medication-overuse headache": "صداع الإفراط في استخدام الأدوية",
+            "Sinus headache": "صداع الجيوب الأنفية",
+            "Headache type not formally identified / unsure": "نوع الصداع لم يُحدَّد رسميًا / غير متأكد",
+            "Sinusitis": "التهاب الجيوب الأنفية",
+            "High blood pressure": "ارتفاع ضغط الدم",
+            "Anemia": "فقر الدم",
+            "Thyroid disorder": "اضطراب الغدة الدرقية",
+            "Sleep disorder": "اضطراب النوم",
+            "Vision problems": "مشكلات في الرؤية",
+            "Jaw joint disorder": "اضطراب المفصل الفكي",
+            "Meningitis": "التهاب السحايا",
+            "Encephalitis": "التهاب الدماغ",
+            "Significant head injury": "إصابة شديدة في الرأس",
+            "Stroke": "سكتة دماغية",
+            "Bleeding in or around the brain": "نزيف في الدماغ أو حوله",
         },
         "counts": {
             "episodes": {"zero": "لا نوبات", "one": "نوبة واحدة", "two": "نوبتان", "few": "{n} نوبات", "many": "{n} نوبة", "other": "{n} نوبة"},
@@ -755,6 +849,10 @@ class Lang:
 
     def symptom(self, name: str) -> str:
         return self._s["symptom_names"].get(name, name)
+
+    def condition(self, name: str) -> str:
+        """A predefined medical-history name in the report's language; anything typed stays as typed."""
+        return self._s["condition_names"].get(name, name)
 
     def unit(self, unit: str | None) -> str:
         return "" if not unit else self._s["units"].get(unit, unit)

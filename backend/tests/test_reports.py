@@ -23,7 +23,7 @@ URL = "/reports/medical"
 PDF = "/reports/medical/pdf"
 JUNE = {"start_date": "2026-06-01", "end_date": "2026-06-30"}
 SECTIONS = [
-    "info", "overview", "history", "pain", "symptoms", "sleep", "factors",
+    "info", "medical_history", "overview", "history", "pain", "symptoms", "sleep", "factors",
     "medication", "observations", "summary", "questions", "limitations", "disclaimer",
 ]
 NAUSEA, LIGHT = 1, 3

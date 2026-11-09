@@ -2,9 +2,10 @@
 
 build_report() returns
   - "data":     the raw numbers (counts, averages, sample sizes), and
-  - "sections": the report itself, sections A–M, each a list of blocks
-                (facts, paragraph, list, table, bars, episode, observation,
-                callout) with every string already in the report's language.
+  - "sections": the report itself, sections A–M plus the user's
+                medical history, each a list of blocks (facts, paragraph, list,
+                table, bars, episode, history_item, observation, callout)
+                with every string already in the report's language.
 
 The frontend preview and the PDF (app/reports/pdf.py) render the same
 sections, so they can't disagree. Statistics come from the insights engine
@@ -24,7 +25,19 @@ from statistics import median
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import DailyFactor, EpisodeSymptom, HeadacheEpisode, MedicationDose, SleepLog, User
+from app.models import (
+    DailyFactor,
+    EpisodeSymptom,
+    HeadacheEpisode,
+    MedicalAllergy,
+    MedicalCondition,
+    MedicalNotes,
+    MedicalProcedure,
+    MedicationDose,
+    SleepLog,
+    User,
+)
+from app.models.medical_history import CONDITION_CATEGORIES
 from app.models.episode import PAIN_LOCATIONS
 from app.reports.text import DISCLAIMER_AR, DISCLAIMER_EN, OBSERVATIONS_AR, Lang
 from app.services.analytics import DateRange
@@ -172,6 +185,75 @@ def _latest_entry(latest: dict, tz) -> tuple[str, date] | None:
 
 
 # ---------------------------------------------------------------------------
+# Medical history (what the user reported; never analysed)
+# ---------------------------------------------------------------------------
+
+def _load_medical_history(db: Session, user: User) -> dict:
+    def rows(model):
+        return db.scalars(
+            select(model).where(model.user_id == user.id).order_by(model.created_at, model.id)
+        ).all()
+
+    notes = db.scalar(select(MedicalNotes.notes).where(MedicalNotes.user_id == user.id))
+    return {
+        "conditions": rows(MedicalCondition),
+        "allergies": rows(MedicalAllergy),
+        "procedures": rows(MedicalProcedure),
+        "notes": notes,
+    }
+
+
+def history_item(name: str, fields: list[tuple[str, str]], details: list[tuple[str, str | None]]) -> dict:
+    """One reported item. `name` and `details` are the user's own words (direction
+    from their own content); `fields` are the report's labels and values."""
+    return {
+        "type": "history_item",
+        "name": name,
+        "fields": [{"label": k, "value": v} for k, v in fields],
+        "details": [{"label": k, "text": v} for k, v in details if v],
+    }
+
+
+def _medical_history_blocks(mh: dict, L: Lang) -> list[dict]:
+    M = "medical_history"
+    blocks = [paragraph(L.t(f"{M}.intro"), "muted")]
+    if not (mh["conditions"] or mh["allergies"] or mh["procedures"] or mh["notes"]):
+        blocks.append(paragraph(L.t(f"{M}.empty")))
+        return blocks
+    for category in CONDITION_CATEGORIES:
+        items = [c for c in mh["conditions"] if c.category == category]
+        if not items:
+            continue
+        blocks.append(subheading(L.t(f"{M}.groups.{category}")))
+        for c in items:
+            fields = [
+                (L.t(f"{M}.status"), L.t(f"{M}.statuses.{c.status}")),
+                (L.t(f"{M}.confirmation"), L.t(f"{M}.confirmations.{c.confirmation}")),
+            ]
+            if c.diagnosis_date:
+                fields.append((L.t(f"{M}.date"), L.date(c.diagnosis_date)))
+            blocks.append(history_item(L.condition(c.condition_name), fields, [(L.t(f"{M}.notes"), c.notes)]))
+    if mh["allergies"]:
+        blocks.append(subheading(L.t(f"{M}.groups.allergies")))
+        for a in mh["allergies"]:
+            fields = [
+                (L.t(f"{M}.type"), L.t(f"{M}.types.{a.type}")),
+                (L.t(f"{M}.severity"), L.t(f"{M}.severities.{a.severity}")),
+            ]
+            details = [(L.t(f"{M}.reaction"), a.reaction), (L.t(f"{M}.notes"), a.notes)]
+            blocks.append(history_item(a.name, fields, details))
+    if mh["procedures"]:
+        blocks.append(subheading(L.t(f"{M}.groups.procedures")))
+        for p in mh["procedures"]:
+            fields = [(L.t(f"{M}.date"), L.date(p.procedure_date))] if p.procedure_date else []
+            blocks.append(history_item(p.name, fields, [(L.t(f"{M}.notes"), p.notes)]))
+    if mh["notes"]:
+        blocks.append(subheading(L.t(f"{M}.groups.notes")))
+        blocks.append(paragraph(mh["notes"], user_text=True))
+    return blocks
+
+
+# ---------------------------------------------------------------------------
 # Observations (from the insights engine) in the report's language
 # ---------------------------------------------------------------------------
 
@@ -269,6 +351,7 @@ def build_report(db: Session, user: User, rng: DateRange, lang: str, now: dateti
     result = analyze(db, user, rng)
     insights = generate_insights(result)
     rec = _load(db, user, rng)
+    medical_history = _load_medical_history(db, user)
     episodes, doses = rec["episodes"], rec["doses"]
     freq, inten = result["frequency"], result["intensity"]
     prev_start, prev_end = result["previous_range"]
@@ -326,6 +409,12 @@ def build_report(db: Session, user: User, rng: DateRange, lang: str, now: dateti
         },
         "factors": {"days": len(factor_rows), "missing_days": rng.days - len(factor_rows)},
         "medication": {"doses": len(doses), "days": len(dose_days), "unlinked": unlinked},
+        "medical_history": {
+            "conditions": len(medical_history["conditions"]),
+            "allergies": len(medical_history["allergies"]),
+            "procedures": len(medical_history["procedures"]),
+            "notes": bool(medical_history["notes"]),
+        },
         "observation_ids": insight_ids,
         "data_status": insights["data_status"],
     }
@@ -358,6 +447,9 @@ def build_report(db: Session, user: User, rng: DateRange, lang: str, now: dateti
         ),
         paragraph(L.t("info.about"), "muted"),
     ]))
+
+    # --- Medical history, as reported by the user (kept apart from the records and the analysis)
+    sections.append(section("medical_history", L, _medical_history_blocks(medical_history, L)))
 
     # --- B. Overview ----------------------------------------------------------------
     ov = data["overview"]
@@ -774,6 +866,8 @@ def build_report(db: Session, user: User, rng: DateRange, lang: str, now: dateti
 
     # --- L. Missing information and limitations ------------------------------------------------------------------
     limits = [L.t("limitations.self_reported")]
+    if any(data["medical_history"].values()):
+        limits.append(L.t("limitations.medical_history"))
     if total < t.min_episodes:
         limits.append(L.t("limitations.insufficient", min=t.min_episodes))
     if total - len(rated):

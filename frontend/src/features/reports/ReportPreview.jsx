@@ -116,6 +116,36 @@ function Episode({ block }) {
   )
 }
 
+// One medical-history item the user reported. The name and details are the
+// user's own words, so they take their direction from their own content.
+function HistoryItem({ block }) {
+  return (
+    <article className="rounded-xl border border-line px-4 py-3">
+      <h5 dir="auto" className="font-semibold text-ink break-words">
+        {block.name}
+      </h5>
+      {block.fields.length > 0 && (
+        <dl className="mt-1.5 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[minmax(0,11rem)_1fr]">
+          {block.fields.map((f, i) => (
+            <div key={i} className="contents">
+              <dt className="font-semibold text-ink-muted">{f.label}</dt>
+              <dd className="min-w-0 text-ink">{f.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {block.details.map((d, i) => (
+        <div key={i} className="mt-2">
+          <p className="text-sm font-semibold text-ink-muted">{d.label}</p>
+          <p dir="auto" className="text-ink break-words whitespace-pre-line">
+            {d.text}
+          </p>
+        </div>
+      ))}
+    </article>
+  )
+}
+
 function Observation({ block }) {
   return (
     <article className="space-y-3 rounded-xl border border-line p-4">
@@ -152,6 +182,8 @@ function Block({ block }) {
       return <Bars block={block} />
     case 'episode':
       return <Episode block={block} />
+    case 'history_item':
+      return <HistoryItem block={block} />
     case 'observation':
       return <Observation block={block} />
     case 'callout':

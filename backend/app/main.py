@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analytics, auth, daily_factors, episodes, insights, reports, sleep, symptoms
+from app.api.routes import analytics, auth, daily_factors, episodes, insights, medical_history, reports, sleep, symptoms
 from app.core.config import get_settings
 from app.core.middleware import harden_responses
 
@@ -30,7 +30,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
     # Lets the browser read the PDF's suggested (safe) file name, and how long
     # to wait after a 429.
@@ -45,6 +45,7 @@ app.include_router(insights.router)
 app.include_router(sleep.router)
 app.include_router(daily_factors.router)
 app.include_router(reports.router)
+app.include_router(medical_history.router)
 
 
 @app.get("/")
